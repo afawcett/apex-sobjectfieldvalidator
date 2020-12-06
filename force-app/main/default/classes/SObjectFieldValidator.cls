@@ -14,13 +14,29 @@ public with sharing class SObjectFieldValidator {
         return this;
     }
 
+    public SObjectFieldValidator when(TriggerOperation triggerState) {
+        return this;
+    }
+
+    public SObjectFieldValidator when(SObjectField field) {
+        return this;
+    }
+
     public SObjectFieldValidator withMessage(String message) {
         current.Message = message;
         return this;
     }
 
-    public SObjectFieldValidator notNull() {
-        current.Criteria.add(new NotNullCondition());
+    public SObjectFieldValidator equals(Object value) {
+        return this;
+    }
+
+    public SObjectFieldValidator isNull() {
+        current.Criteria.add(new IsNullCondition());
+        return this;
+    }
+
+    public SObjectFieldValidator validate(TriggerOperation triggerState, Map<Id, SObject> oldMap, Map<Id, SObject> newMap) {
         return this;
     }
 
@@ -31,6 +47,12 @@ public with sharing class SObjectFieldValidator {
             }
         }
         return this;
+    }
+
+    @TestVisible
+    private static void setMockQueryResult(SObjectField field, List<SObject> results)
+    {
+    
     }
 
     public static SObjectFieldValidator build() {
@@ -55,9 +77,9 @@ public with sharing class SObjectFieldValidator {
         abstract boolean evaluate(Object fieldValue);
     }    
 
-    private class NotNullCondition extends FieldValidationCondition {
+    private class IsNullCondition extends FieldValidationCondition {
         override boolean evaluate(Object fieldValue) {
-            return fieldValue!=null;
+            return fieldValue==null;
         }
     }
 }
