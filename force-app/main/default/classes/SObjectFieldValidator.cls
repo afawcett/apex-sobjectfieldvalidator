@@ -1,10 +1,10 @@
 public with sharing class SObjectFieldValidator {
 
-    private List<FieldValidation> validations;
     private FieldValidation current;
     private TriggerOperation triggerOperation;
+    private List<FieldValidation> validations;
 
-    public SObjectFieldValidator() {
+    private SObjectFieldValidator() {
         validations = new List<FieldValidation>();
     }
 
@@ -26,11 +26,11 @@ public with sharing class SObjectFieldValidator {
     public SObjectFieldValidator when(SObjectField field) {
         FieldValidation whenFieldValidation = new FieldValidation();
         whenFieldValidation.field = field;
-        current.whenValidations.add(whenFieldValidation);
+        current.whenFields.add(whenFieldValidation);
         return this;
     }
 
-    public SObjectFieldValidator withMessage(String message) {
+    public SObjectFieldValidator addError(String message) {
         current.message = message;
         return this;
     }
@@ -40,7 +40,7 @@ public with sharing class SObjectFieldValidator {
         return this;
     }
 
-    public SObjectFieldValidator hasChanged() {
+    public SObjectFieldValidator whenChanged() {
         current.addCriteria(new HasChangedCondition());
         return this;
     }
@@ -50,10 +50,15 @@ public with sharing class SObjectFieldValidator {
         return this;
     }
 
+    public SObjectFieldValidator validate(List<SObject> records) {
+        return validate(null, new Map<Id, SObject>(), new Map<Id, SObject>(records));
+    }
+
     public SObjectFieldValidator validate(TriggerOperation triggerState, Map<Id, SObject> oldMap, Map<Id, SObject> newMap) {
 
+        // Stated used during validation
         FieldValidationContext ctx = new FieldValidationContext();
-        ctx.triggerState = null;
+        ctx.triggerState = triggerState;
         ctx.relatedRecords = new Map<SObjectField, Map<Id, SObject>>();
 
         // Prequery related records for use by related field validations
@@ -61,14 +66,14 @@ public with sharing class SObjectFieldValidator {
             DescribeFieldResult validationFieldDescribe = validation.field.getDescribe();
             // Lookup field?
             if(validationFieldDescribe.getType() == DisplayType.Reference) {
-                // TOOD: Check 'hasChanged' condition to void doing this if the related record reference has not changed and hence the validation will not execute
+                // TOOD: Split the logic in the 'hasErrors' method to prepass to enable only prequery of fields that need validation
                 // TODO: Some of the following code could be done in the 'build' phase to improve performance incase of iterative calls to this method
                 SObjectType referencedObjectType = validationFieldDescribe.getReferenceTo()[0];
                 DescribeSObjectResult referencedObjectDescribe = referencedObjectType.getDescribe();
                 Map<String, SObjectField> referencedObjectFields = referencedObjectDescribe.fields.getMap();
                 List<String> relatedQueryFields = new List<String>();
                 // 'when' field from the related object?
-                for(FieldValidation whenFieldValidation : validation.whenValidations) {
+                for(FieldValidation whenFieldValidation : validation.whenFields) {
                     String relatedFieldName = whenFieldValidation.field.getDescribe().getLocalName();
                     if(referencedObjectFields.containsKey(relatedFieldName)) {
                         relatedQueryFields.add(relatedFieldName);
@@ -92,27 +97,20 @@ public with sharing class SObjectFieldValidator {
             }
         }
 
+        // Perform field validations
         for(SObject newRecord : newMap.values()) {
             for(FieldValidation validation : validations) {
                 ctx.record = newRecord;
                 ctx.oldRecord = oldMap.get(newRecord.Id);
                 ctx.fieldValue = ctx.record.get(validation.field);
                 ctx.oldFieldValue = ctx.oldRecord.get(validation.field);
-                if(validation.validate(ctx)==false) {
+                if(validation.hasErrors(ctx)) {
                     newRecord.addError(validation.Field, validation.Message);
-                }
+                }    
             }    
         }
-        return this;
-    }
 
-    public SObjectFieldValidator validate(List<SObject> records) {
         return this;
-    }
-
-    @TestVisible
-    private static void setMockQueryResult(SObjectField field, List<SObject> results)
-    {    
     }
 
     public static SObjectFieldValidator build() {
@@ -129,19 +127,39 @@ public with sharing class SObjectFieldValidator {
     }
     
     private class FieldValidation {
+
         public SObjectField field;
         public String message;
-        public List<FieldValidation> whenValidations = new List<FieldValidation>();
-        public List<FieldValidationCondition> criteria = new List<FieldValidationCondition>();
+        public List<FieldValidation> whenFields = new List<FieldValidation>();
+        public List<FieldValidationCondition> whenCriteria = new List<FieldValidationCondition>();
+        public List<FieldValidationCondition> errorCriteria = new List<FieldValidationCondition>();
+
         public void addCriteria(FieldValidationCondition condition) {
-            if(whenValidations.size()==0) {
-                criteria.add(condition);
+            // Started adding related field crtierias?
+            if(whenFields.size()==0) {
+                // Criteria related to determine if the field validation is needed?
+                if(condition instanceof FieldValidationPrecheck) {
+                    whenCriteria.add(condition);
+                } else {
+                    // Criteria related to determining if the field is in error
+                    errorCriteria.add(condition);
+                }
             } else {
-                whenValidations[whenValidations.size()-1].addCriteria(condition);
+                // Add this criteria to the last added related field to this validation
+                whenFields[whenFields.size()-1].whenCriteria.add(condition);
             }
         }
-        public boolean validate(FieldValidationContext ctx) {
-            if(whenValidations.size()>0) {
+
+        public boolean hasErrors(FieldValidationContext ctx) {
+
+            // If any of the follow criteria fails the field does not need validating
+            for(FieldValidationCondition criteria : whenCriteria) {
+                if(criteria.evaluate(ctx)==false) {
+                    return false;
+                }
+            }
+            // If any of the follow related field criteria fails the field does need validating
+            if(whenFields.size()>0) {
                 FieldValidationContext whenCtx = new FieldValidationContext();
                 if(ctx.relatedRecords.containsKey(field)) {
                     Map<Id, SObject> relatedRecords = ctx.relatedRecords.get(field);
@@ -152,20 +170,27 @@ public with sharing class SObjectFieldValidator {
                     whenCtx.oldRecord = ctx.oldRecord;    
                 }
                 whenCtx.triggerState = ctx.triggerState;
-                for(FieldValidation whenValidation : whenValidations) {
+                for(FieldValidation whenValidation : whenFields) {
                     whenCtx.fieldValue = whenCtx.record.get(whenValidation.field);
-                    whenCtx.oldFieldValue = whenCtx.oldRecord==null ? null : ctx.oldRecord.get(whenValidation.field);    
-                    if(whenValidation.validate(whenCtx)==false) {
-                        return false;
+                    whenCtx.oldFieldValue = whenCtx.oldRecord==null ? null : whenCtx.oldRecord.get(whenValidation.field);    
+                    for(FieldValidationCondition criteria : whenValidation.whenCriteria) {
+                        if(criteria.evaluate(whenCtx)==false) {
+                            return false;
+                        }
                     }
                 }    
-            }
-            for(FieldValidationCondition fieldValidationCondition : criteria) {
-                if(fieldValidationCondition.evaluate(ctx)==false) {
-                    return false;
+                // If there is no further error criteria then its assumed the related field criteria is the error criteria
+                if(errorCriteria.size()==0) {
+                    return true;
                 }
             }
-            return true;
+            // Evaluate crtiera on the field itself to determine if its in error
+            for(FieldValidationCondition criteria : errorCriteria) {
+                if(criteria.evaluate(ctx)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
@@ -173,17 +198,19 @@ public with sharing class SObjectFieldValidator {
         abstract boolean evaluate(FieldValidationContext ctx);
     }    
 
-    private class HasChangedCondition extends FieldValidationCondition {
+    private interface FieldValidationPrecheck {}
+
+    private class HasChangedCondition extends FieldValidationCondition implements FieldValidationPrecheck {
         override boolean evaluate(FieldValidationContext ctx) {
-            return ctx.oldFieldValue == null ? true : !ctx.fieldValue.equals(ctx.oldFieldValue);
+            return ctx.fieldValue == ctx.oldFieldValue ? false : true;
         }
     }
 
-    private class TriggerStateCondition extends FieldValidationCondition {
+    private class TriggerStateCondition extends FieldValidationCondition implements FieldValidationPrecheck {
         private TriggerOperation triggerOperation;
-        public TriggerStateCondition(TriggerOperation triggerOperation) { this.triggerOperation = triggerOperation; }
+        public TriggerStateCondition(TriggerOperation triggerState) { triggerOperation = triggerState; }
         override boolean evaluate(FieldValidationContext ctx) {
-            return ctx.triggerState==null ? false : this.triggerOperation.equals(ctx.triggerState);
+            return triggerOperation == ctx.triggerState;
         }
     }
 
@@ -197,7 +224,10 @@ public with sharing class SObjectFieldValidator {
         Object equalValue;
         private EqualsCondition(Object value) { equalValue = value; }
         override boolean evaluate(FieldValidationContext ctx) {
-            return ctx.fieldValue.equals(equalValue);
+            return ctx.fieldValue == equalValue;
         }
     }
+
+    @TestVisible
+    private static void setMockQueryResult(SObjectField field, List<SObject> results) { }
 }
