@@ -65,4 +65,22 @@ private class SObjectFieldValidatorTest {
         List<Database.Error> errors = newMap.get(opportunityId).getErrors();
         System.assertEquals(0, errors.size());
     }
+
+    @IsTest
+    private static void givenNoChangedNotNullProducesNoErrorsNoSQL() {
+        // Given
+        Account relatedAccount = new Account(Name = 'Test', NumberOfEmployees = 100);        
+        insert relatedAccount;
+        Id opportunityId = Opportunity.SObjectType.getDescribe().getKeyPrefix()+'000000000001';
+        Id accountId = relatedAccount.Id;
+        TriggerOperation triggerState = TriggerOperation.AFTER_UPDATE;
+        Map<Id, SObject> oldMap = new Map<Id, SObject>{opportunityId => new Opportunity(Id = opportunityId, StageName = 'Closed Won', Description = 'X', AccountId = accountId)};
+        Map<Id, SObject> newMap = new Map<Id, SObject>{opportunityId => new Opportunity(Id = opportunityId, StageName = 'Closed Won', Description = null, AccountId = accountId)};
+        // When
+        buildTestValidator().validate(triggerState, oldMap, newMap); 
+        // Then
+        List<Database.Error> errors = newMap.get(opportunityId).getErrors();
+        System.assertEquals(0, errors.size());
+        System.assertEquals(0, Limits.getQueries());
+    }
 }
