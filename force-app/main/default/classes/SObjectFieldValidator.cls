@@ -87,7 +87,7 @@ public with sharing class SObjectFieldValidator {
                 ctx.record = newRecord;
                 ctx.oldRecord = oldMap.get(newRecord.Id);
                 ctx.fieldValue = ctx.record.get(validation.field);
-                ctx.oldFieldValue = ctx.oldRecord.get(validation.field);
+                ctx.oldFieldValue = ctx.oldRecord?.get(validation.field);
                 if(validation.requiresValidationPhase1(ctx)) {
                     fieldsRequiringValidation.add(validation);
                 }            
@@ -113,8 +113,8 @@ public with sharing class SObjectFieldValidator {
                 // Query related records with fields referenced by 'when' conditions
                 if(relatedQueryFields.size()>0) {
                     String relatedQuery = 
-                        'select ' + String.join(relatedQueryFields, ',') + 
-                        ' from ' + referencedObjectDescribe.getName() + 
+                        'select ' + String.escapeSingleQuotes(String.join(relatedQueryFields, ',')) + 
+                        ' from ' + String.escapeSingleQuotes(referencedObjectDescribe.getName()) + 
                         ' where Id in :ids';
                     Set<Id> ids = new Set<Id>();
                     for(SObject newRecord : newMap.values()) {
@@ -133,7 +133,7 @@ public with sharing class SObjectFieldValidator {
                 ctx.record = newRecord;
                 ctx.oldRecord = oldMap.get(newRecord.Id);
                 ctx.fieldValue = ctx.record.get(validation.field);
-                ctx.oldFieldValue = ctx.oldRecord.get(validation.field);
+                ctx.oldFieldValue = ctx.oldRecord?.get(validation.field);
                 if(validation.requiresValidationPhase2(ctx)) {
                     if(validation.hasErrors(ctx)) {
                         newRecord.addError(validation.Field, validation.Message);

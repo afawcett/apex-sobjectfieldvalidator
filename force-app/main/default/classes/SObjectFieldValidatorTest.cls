@@ -12,6 +12,25 @@ private class SObjectFieldValidatorTest {
     }
 
     @IsTest
+    private static void givenInMemoryNullProducesError() {
+        // Given
+        Id opportunityId = Opportunity.SObjectType.getDescribe().getKeyPrefix()+'000000000001';
+        Opportunity opp = new Opportunity(Id = opportunityId, Description = null, StageName = 'Closed Won');
+        List<Opportunity> opps = new List<Opportunity>();
+        opps.add(opp);
+        // When
+        SObjectFieldValidator.build()            
+            .field(Opportunity.Description).isNull().addError('Description must be specified when Opportunity is closed')
+                .when(Opportunity.StageName).equals('Closed Won')
+            .validate(opps);
+        // Then
+        List<Database.Error> errors = opp.getErrors();
+        System.assertEquals(1, errors.size());
+        System.assertEquals('Description', errors[0].getFields()[0]);
+        System.assertEquals('Description must be specified when Opportunity is closed', errors[0].getMessage());
+    }
+
+    @IsTest
     private static void givenWhenChangedNullOrEqualsProducesErrors() {
         // Given
         Account relatedAccount = new Account(Name = 'Test', NumberOfEmployees = null);        
