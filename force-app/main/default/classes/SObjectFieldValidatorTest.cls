@@ -1,13 +1,16 @@
 @IsTest
 private class SObjectFieldValidatorTest {
 
+    private static final Id TEST_ACCOUNT_ID = Account.SObjectType.getDescribe().getKeyPrefix()+'000000000001';
+    private static final Id TEST_OPPORTUNIT_ID = Opportunity.SObjectType.getDescribe().getKeyPrefix()+'000000000001';
+
     private static SObjectFieldValidator buildTestValidator() {
         // Test validator used for these tests
         return SObjectFieldValidator.build()            
             .when(TriggerOperation.AFTER_UPDATE)
-                .field(Opportunity.Description).whenChanged().isNull().addError('Description must be specified when Opportunity is closed')
-                    .when(Opportunity.StageName).whenChanged().equals('Closed Won')
-                .field(Opportunity.AccountId).whenChanged().addError('Account does not have any employees')
+                .field(Opportunity.Description).hasChanged().isNull().addError('Description must be specified when Opportunity is closed')
+                    .when(Opportunity.StageName).hasChanged().equals('Closed Won')
+                .field(Opportunity.AccountId).hasChanged().addError('Account does not have any employees')
                     .when(Account.NumberOfEmployees).isNull();    
     }
 
@@ -31,7 +34,33 @@ private class SObjectFieldValidatorTest {
     }
 
     @IsTest
-    private static void givenWhenChangedNullOrEqualsProducesErrors() {
+    private static void givenInMemoryRelationshipValidationProducesError() {
+        // Given
+        Account relatedAccount = 
+            new Account(Id = TEST_ACCOUNT_ID, Name = 'Test', NumberOfEmployees = null);
+        Map<Id, SObject> oldMap = 
+            new Map<Id, SObject> { TEST_OPPORTUNIT_ID => 
+                new Opportunity(Id = TEST_OPPORTUNIT_ID, StageName = 'Prospecting', Description = 'X', AccountId = null)};
+        Map<Id, SObject> newMap = 
+            new Map<Id, SObject> { TEST_OPPORTUNIT_ID => 
+                new Opportunity(Id = TEST_OPPORTUNIT_ID, StageName = 'Closed Won', Description = null, AccountId = TEST_ACCOUNT_ID)};
+        Map<SObjectField, Map<Id, SObject>> relatedRecords = 
+            new Map<SObjectField, Map<Id, SObject>> {
+                Opportunity.AccountId => 
+                    new Map<Id, SObject>(new List<Account> { relatedAccount })};
+        // When
+        buildTestValidator().validate(TriggerOperation.AFTER_UPDATE, oldMap, newMap, relatedRecords); 
+        // Then
+        List<Database.Error> errors = newMap.get(TEST_OPPORTUNIT_ID).getErrors();
+        System.assertEquals(2, errors.size());
+        System.assertEquals('AccountId', errors[0].getFields()[0]);
+        System.assertEquals('Account does not have any employees', errors[0].getMessage());
+        System.assertEquals('Description', errors[1].getFields()[0]);
+        System.assertEquals('Description must be specified when Opportunity is closed', errors[1].getMessage());
+    }
+
+    @IsTest
+    private static void givenhasChangedNullOrEqualsProducesErrors() {
         // Given
         Account relatedAccount = new Account(Name = 'Test', NumberOfEmployees = null);        
         insert relatedAccount;

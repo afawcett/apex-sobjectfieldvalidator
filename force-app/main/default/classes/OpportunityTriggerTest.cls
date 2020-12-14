@@ -13,9 +13,9 @@ private class OpportunityTriggerTest {
             // Fluent style validation
             SObjectFieldValidator.build()            
                 .when(TriggerOperation.AFTER_UPDATE)
-                    .field(Opportunity.Description).whenChanged().isNull().addError('Description must be specified when Opportunity is closed')
-                        .when(Opportunity.StageName).whenChanged().equals('Closed Won')
-                    .field(Opportunity.AccountId).whenChanged().addError('Account does not have any employees')
+                    .field(Opportunity.Description).hasChanged().isNull().addError('Description must be specified when Opportunity is closed')
+                        .when(Opportunity.StageName).hasChanged().equals('Closed Won')
+                    .field(Opportunity.AccountId).hasChanged().addError('Account does not have any employees')
                         .when(Account.NumberOfEmployees).isNull()
                 .validate(operation, oldMap, newMap);
         }
@@ -73,7 +73,7 @@ private class OpportunityTriggerTest {
         // Given
         OpportunityTriggerHandler.current = new WithSObjectFieldValidator();
         // Then
-        givenWhenChangedNullOrEqualsProducesErrors();
+        givenhasChangedNullOrEqualsProducesErrors();
         givenNoChangedNotNullProducesNoErrors();
         givenChangedNotNullProducesNoErrors();
         givenNoChangedNotNullProducesNoErrorsNoSQL();
@@ -84,13 +84,13 @@ private class OpportunityTriggerTest {
         // Given
         OpportunityTriggerHandler.current = new WithHandCodedValidation();
         // Then
-        givenWhenChangedNullOrEqualsProducesErrors();
+        givenhasChangedNullOrEqualsProducesErrors();
         givenNoChangedNotNullProducesNoErrors();
         givenChangedNotNullProducesNoErrors();
         givenNoChangedNotNullProducesNoErrorsNoSQL();
     }
 
-    private static void givenWhenChangedNullOrEqualsProducesErrors() {
+    private static void givenhasChangedNullOrEqualsProducesErrors() {
         // Given
         Account relatedAccount = new Account(Name = 'Test', NumberOfEmployees = null);        
         insert relatedAccount;

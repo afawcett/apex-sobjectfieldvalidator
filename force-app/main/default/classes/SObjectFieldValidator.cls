@@ -43,7 +43,7 @@ public with sharing class SObjectFieldValidator {
         return this;
     }
 
-    public SObjectFieldValidator whenChanged() {
+    public SObjectFieldValidator hasChanged() {
         condition(new HasChangedCondition());
         return this;
     }
@@ -75,10 +75,14 @@ public with sharing class SObjectFieldValidator {
     }
 
     public SObjectFieldValidator validate(TriggerOperation triggerState, Map<Id, SObject> oldMap, Map<Id, SObject> newMap) {
+        return validate(triggerState, oldMap, newMap, null);
+    }
+
+    public SObjectFieldValidator validate(TriggerOperation triggerState, Map<Id, SObject> oldMap, Map<Id, SObject> newMap, Map<SObjectField, Map<Id, SObject>> relatedRecords) {
         // Stated used during validation
         FieldValidationContext ctx = new FieldValidationContext();
         ctx.triggerState = triggerState;
-        ctx.relatedRecords = new Map<SObjectField, Map<Id, SObject>>();
+        ctx.relatedRecords = relatedRecords==null ? new Map<SObjectField, Map<Id, SObject>>() : relatedRecords;
         // Prescan field pre-validation critiera to determine fields to continue to process
         List<FieldValidation> fieldsRequiringValidation = new List<FieldValidation>();
         for(SObject newRecord : newMap.values()) {
@@ -98,6 +102,10 @@ public with sharing class SObjectFieldValidator {
             // Lookup field?
             DescribeFieldResult validationFieldDescribe = validation.field.getDescribe();
             if(validationFieldDescribe.getType() == DisplayType.Reference) {
+                // Related records provided by caller?
+                if(ctx.relatedRecords.containsKey(validation.field)) {
+                    continue;
+                }
                 // TOOD: This prequerying could be further optimized by grouping validations over the same child object
                 SObjectType referencedObjectType = validationFieldDescribe.getReferenceTo()[0];
                 DescribeSObjectResult referencedObjectDescribe = referencedObjectType.getDescribe();
