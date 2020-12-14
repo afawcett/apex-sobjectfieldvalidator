@@ -131,4 +131,32 @@ private class SObjectFieldValidatorTest {
         System.assertEquals(0, errors.size());
         System.assertEquals(0, Limits.getQueries());
     }
+
+    @IsTest
+    private static void givenInMemoryCustomValidatorProducesError() {
+        // Given
+        Id opportunityId = Opportunity.SObjectType.getDescribe().getKeyPrefix()+'000000000001';
+        Opportunity opp = new Opportunity(Id = opportunityId, Description = null, StageName = 'Closed Won');
+        List<Opportunity> opps = new List<Opportunity>();
+        opps.add(opp);
+        // When
+        SObjectFieldValidator.build()            
+            .field(Opportunity.Description).isNull().addError('Description must be specified when Opportunity is closed')
+                .when(Opportunity.StageName).condition(new StageNameValidator())
+            .validate(opps);
+        // Then
+        List<Database.Error> errors = opp.getErrors();
+        System.assertEquals(1, errors.size());
+        System.assertEquals('Description', errors[0].getFields()[0]);
+        System.assertEquals('Description must be specified when Opportunity is closed', errors[0].getMessage());
+    }
+    // Example of a custom validator
+    private class StageNameValidator extends SObjectFieldValidator.FieldValidationCondition { 
+        boolean evaluate(SObjectFieldValidator.FieldValidationContext ctx) {
+            Set<String> validValues = new Set<String>();
+            validValues.add('Closed Won');
+            validValues.add('Prospecting');
+            return validValues.contains((String)ctx.fieldValue);
+        }
+    }
 }

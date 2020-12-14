@@ -160,13 +160,13 @@ public with sharing class SObjectFieldValidator {
     /**
      * Manages state during a given validation cycle
      */
-    private class FieldValidationContext {
-        SObject record;
-        SObject oldRecord;
-        Object fieldValue; 
-        Object oldFieldValue;
-        TriggerOperation triggerState;
-        Map<SObjectField, Map<Id, SObject>> relatedRecords;
+    public class FieldValidationContext {
+        public SObject record;
+        public SObject oldRecord;
+        public Object fieldValue; 
+        public Object oldFieldValue;
+        public TriggerOperation triggerState;
+        public Map<SObjectField, Map<Id, SObject>> relatedRecords;
     }
     
     /**
