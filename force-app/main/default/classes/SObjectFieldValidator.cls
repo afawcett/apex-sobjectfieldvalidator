@@ -1,6 +1,8 @@
 /**
  * Proof of concept SObject Field Validator (Processor?) to explore the new addError runtime flexiblity
- */
+ *
+ * *
+ * */
 public with sharing class SObjectFieldValidator {
 
     private FieldValidation current;
