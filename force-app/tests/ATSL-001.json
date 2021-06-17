@@ -1,0 +1,6 @@
+{
+    "ApexTestClass": [
+        "SObjectFieldValidatorTest",
+        "OpportunityTriggerTest"
+    ]
+}
