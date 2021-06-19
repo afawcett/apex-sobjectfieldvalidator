@@ -30,5 +30,3 @@ if os.path.isdir(path_to_json):
 
     if len(test_classes) > 0:
         print(test_classes)
-
-    sys.exit(0)
