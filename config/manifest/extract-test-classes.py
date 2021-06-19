@@ -21,7 +21,8 @@ if os.path.isdir(path_to_json):
         json_file = path_to_json + '/' + json_file
         with open(json_file) as f:
             data = json.load(f)
-            if data.has_key(key_to_lookup):
+            # if data.has_key(key_to_lookup):
+            if key_to_lookup in data:
                 test_classes += ", ".join(data[key_to_lookup])
         test_classes += ", "
 
