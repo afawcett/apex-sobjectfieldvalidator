@@ -44,11 +44,13 @@ def copyFileIsValid(src, dest, fileName):
 
 
 def processFile(ffile, target_path):
+    root = sys.argv[1]
     file1 = open(ffile, 'r')
     Lines = file1.readlines()
 
     for line in Lines:
-        original = './'+line.strip()
+        #original = './'+line.strip()
+        original = root+'/'+line.strip()
         target = target_path + '/' + line.strip()
         src = original[:original.rfind('/')]
         dest = target[:target.rfind('/')]
@@ -56,11 +58,11 @@ def processFile(ffile, target_path):
         copyFileIsValid(src, dest, fileName)
 
 
-if len(sys.argv) < 3:
-    print('Invalid arguments. Expecting 2 arguments, SOURCE and DESTINATION.')
+if len(sys.argv) < 4:
+    print('Invalid arguments. Expecting 3 arguments: ROOT, SOURCE and DESTINATION.')
 else:
-    source = sys.argv[1]
-    destination = sys.argv[2]  # './delta'
+    source = sys.argv[2]
+    destination = sys.argv[3]  # './delta'
 
     if not os.path.isdir(destination):
         print('DESTINATION "' + destination +
