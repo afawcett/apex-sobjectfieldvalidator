@@ -38,7 +38,7 @@ def copyFileIsValid(src, dest, fileName):
 
         shutil.copyfile(original, target)
 
-        print('File "' + original + '" copied to "' + dest + '"')
+        print('File "' + original + '" copied to "' + target + '"')
 
         copyMetaDataFile(original, target)
 
@@ -62,10 +62,10 @@ else:
     source = sys.argv[1]
     destination = sys.argv[2]  # './delta'
 
-    # if not os.path.isdir(destination):
-    #     print('DESTINATION "' + destination +
-    #           '" (argumento two) is not a directory!')
-    if os.path.isfile(source):
+    if not os.path.isdir(destination):
+        print('DESTINATION "' + destination +
+              '" (argumento two) is not a directory!')
+    elif os.path.isfile(source):
         processFile(source, destination)
     elif os.path.isdir(source):
         print('Not implemented yeat')
