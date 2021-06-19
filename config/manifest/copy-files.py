@@ -12,7 +12,7 @@ def copyMetaDataFile(original, target):
     target += extensionFile
     if os.path.exists(original):
         shutil.copyfile(original, target)
-        print('Metadata File "' + original + '" copied to "' + target + '"')
+        #print('Metadata File "' + original + '" copied to "' + target + '"')
 
 
 def copyComponent(src, dest, fileName):
@@ -21,7 +21,7 @@ def copyComponent(src, dest, fileName):
               '" from "' + fileName + '" is invalid!')
 
     copy_tree(src, dest)
-    print('Component "' + fileName + '" copied to "' + dest + '"')
+   #print('Component "' + fileName + '" copied to "' + dest + '"')
 
 
 def copyFileIsValid(src, dest, fileName):
@@ -38,7 +38,7 @@ def copyFileIsValid(src, dest, fileName):
 
         shutil.copyfile(original, target)
 
-        print('File "' + original + '" copied to "' + target + '"')
+        #print('File "' + original + '" copied to "' + target + '"')
 
         copyMetaDataFile(original, target)
 
