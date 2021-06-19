@@ -1,0 +1,36 @@
+.THIS img {
+    width: token(squareIconLargeBoundaryAlt);
+    height: token(squareIconLargeBoundaryAlt);
+    border-radius: token(borderRadiusCircle);
+    margin-bottom: token(varSpacingXSmall);
+}
+
+.THIS .slds-card__footer {
+    color: rgb(112, 110, 107);
+}
+
+.THIS .aura {
+    background-color: #f39f75;
+    color: rgb(255, 255, 255);
+    padding: token(borderWidthThin) token(varSpacingXxSmall);
+    border-radius: 3px;
+}
+
+.THIS c-contact-list {
+    position: relative;
+    border: solid token(borderWidthThin) #ecebea;
+    border-radius: token(borderRadiusMedium);
+    display: block;
+    padding: 10px token(varSpacingXxxSmall) token(varSpacingXxxSmall)
+        token(varSpacingXxxSmall);
+}
+
+.THIS c-contact-list:before {
+    content: 'c-contact-list (Lightning Web component)';
+    color: rgb(221, 219, 218);
+    position: absolute;
+    top: -9px;
+    left: token(varSpacingXxSmall);
+    background-color: token(colorBackgroundAlt);
+    padding: 0 token(varSpacingXxSmall);
+}

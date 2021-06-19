@@ -1,12 +1,17 @@
-import os, json
+import os
+import json
 import sys
 
-test_classes=""
+test_classes = ""
 key_to_lookup = "ApexTestClass"
 
-path_to_json = "./force-app/tests"
+path_to_json = "./tests"
 
-json_files = [pos_json for pos_json in os.listdir(path_to_json) if pos_json.endswith('.json')]
+if len(sys.argv) > 1:
+    path_to_json = sys.argv[1]
+
+json_files = [pos_json for pos_json in os.listdir(
+    path_to_json) if pos_json.endswith('.json')]
 
 for json_file in json_files:
     json_file = path_to_json + '/' + json_file
@@ -18,4 +23,5 @@ for json_file in json_files:
 
 test_classes = test_classes[:-2]
 
-print(test_classes)
+if len(test_classes) > 0:
+    print(test_classes)
