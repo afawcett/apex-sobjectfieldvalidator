@@ -10,6 +10,8 @@ path_to_json = "./tests"
 if len(sys.argv) > 1:
     path_to_json = sys.argv[1]
 
+print(path_to_json)
+
 if os.path.isdir(path_to_json):
 
     json_files = [pos_json for pos_json in os.listdir(
